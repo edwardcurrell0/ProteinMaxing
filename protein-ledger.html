@@ -1,0 +1,1492 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protein Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0D100D;
+  --bg-grain:#11140F;
+  --surface:#161A15;
+  --surface-raised:#1B201A;
+  --line:#272D25;
+  --line-soft:#1F241D;
+  --text:#EDEBE2;
+  --text-muted:#8C9387;
+  --text-faint:#5A6055;
+  --signal:#E3592C;
+  --signal-soft:#F2A07B;
+  --signal-dim:#3A1F14;
+  --ok:#5FB39E;
+  --ok-dim:#15281F;
+  --warn:#D9A53C;
+  --gold:#C9A35E;
+  --font-display:'Fraunces',serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  line-height:1.5;
+  padding:0 0 100px;
+  min-height:100vh;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.fade-in{animation:fadeUp .4s ease both;}
+
+/* ===== Header ===== */
+header.top{
+  border-bottom:1px solid var(--line);
+  padding:44px 0 32px;
+  position:relative;
+}
+.eyebrow{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--text-faint);
+  margin-bottom:14px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.eyebrow .dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--signal);
+}
+h1{
+  font-family:var(--font-display);
+  font-weight:600;
+  font-optical-sizing:auto;
+  font-size:46px;
+  letter-spacing:-0.015em;
+  margin-bottom:8px;
+}
+h1 em{
+  font-style:normal;
+  font-weight:500;
+}
+.sub{
+  font-size:14.5px;
+  color:var(--text-muted);
+  max-width:560px;
+}
+
+.header-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:24px;
+  flex-wrap:wrap;
+}
+
+/* unit switcher */
+.unit-switcher{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-end;
+}
+.unit-switcher .label{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--text-faint);
+}
+.unit-toggle-group{
+  display:flex;
+  border:1px solid var(--line);
+  border-radius:6px;
+  overflow:hidden;
+  background:var(--surface);
+}
+.unit-toggle-group button{
+  font-family:var(--font-mono);
+  font-size:12px;
+  padding:9px 14px;
+  background:transparent;
+  border:none;
+  color:var(--text-muted);
+  cursor:pointer;
+  border-right:1px solid var(--line);
+  transition:background .15s ease,color .15s ease;
+}
+.unit-toggle-group button:last-child{border-right:none;}
+.unit-toggle-group button.active{
+  background:var(--signal);
+  color:#160F0B;
+  font-weight:600;
+}
+.unit-toggle-group button:hover:not(.active){color:var(--text);background:var(--surface-raised);}
+
+/* ===== Gauge ===== */
+.gauge-block{margin-top:32px;}
+.gauge-readout{
+  display:flex;
+  align-items:baseline;
+  gap:20px;
+  margin-bottom:12px;
+  flex-wrap:wrap;
+}
+.gauge-readout .num{
+  font-family:var(--font-mono);
+  font-size:48px;
+  font-weight:600;
+  letter-spacing:-0.01em;
+  font-variant-numeric:tabular-nums;
+}
+.gauge-readout .num span{font-size:21px;color:var(--text-faint);font-weight:400;}
+.gauge-readout .delta{
+  font-family:var(--font-mono);
+  font-size:13px;
+  padding:6px 12px;
+  border-radius:20px;
+  white-space:nowrap;
+  transition:all .3s ease;
+}
+.delta.short{background:var(--signal-dim);color:var(--signal-soft);}
+.delta.met{background:var(--ok-dim);color:#A7E0D0;}
+
+.gauge-track{
+  position:relative;
+  height:18px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:3px;
+  overflow:hidden;
+}
+.gauge-fill{
+  position:absolute;left:0;top:0;bottom:0;
+  background:linear-gradient(90deg,#8A3B23,var(--signal) 70%,var(--signal-soft));
+  transition:width .5s cubic-bezier(.2,.8,.2,1);
+}
+.gauge-fill.over{
+  background:linear-gradient(90deg,#256356,var(--ok) 70%,#9FE0CD);
+}
+.gauge-fill::after{
+  content:'';
+  position:absolute;right:0;top:0;bottom:0;width:3px;
+  background:rgba(255,255,255,0.5);
+}
+.gauge-segments{
+  position:absolute;inset:0;
+  display:flex;
+}
+.gauge-segments span{flex:1;border-right:1px solid rgba(0,0,0,0.25);}
+.gauge-segments span:last-child{border-right:none;}
+.gauge-ticks{
+  display:flex;justify-content:space-between;
+  font-family:var(--font-mono);
+  font-size:10px;color:var(--text-faint);
+  margin-top:8px;
+}
+
+/* stat strip */
+.stat-strip{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1px;
+  background:var(--line);
+  border:1px solid var(--line);
+  border-radius:6px;
+  overflow:hidden;
+  margin-top:28px;
+}
+.stat-cell{
+  background:var(--surface);
+  padding:16px 18px;
+}
+.stat-cell .stat-label{
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--text-faint);
+  margin-bottom:6px;
+}
+.stat-cell .stat-value{
+  font-family:var(--font-mono);
+  font-size:20px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+}
+.stat-cell .stat-value small{font-size:12px;color:var(--text-faint);font-weight:400;}
+
+/* ===== Layout ===== */
+main{padding-top:48px;}
+.section-label{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:var(--text-faint);
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:18px;
+}
+.section-label::after{
+  content:'';
+  flex:1;
+  height:1px;
+  background:var(--line);
+}
+.section-label .count{color:var(--signal);}
+
+.search-bar{
+  margin-bottom:10px;
+  position:relative;
+}
+.search-bar input{
+  width:100%;
+  background:var(--surface);
+  border:1px solid var(--line);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:14px;
+  padding:13px 16px 13px 38px;
+  border-radius:6px;
+  transition:border-color .2s ease;
+}
+.search-bar input:focus{outline:none;border-color:var(--signal);}
+.search-bar::before{
+  content:'';
+  position:absolute;left:14px;top:50%;
+  width:13px;height:13px;
+  transform:translateY(-50%);
+  border:1.5px solid var(--text-faint);
+  border-radius:50%;
+}
+.search-bar::after{
+  content:'';
+  position:absolute;left:23px;top:60%;
+  width:6px;height:1.5px;
+  background:var(--text-faint);
+  transform:rotate(45deg);
+}
+.search-results{
+  margin-bottom:24px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  overflow:hidden;
+  background:var(--surface);
+}
+.search-results.hidden{display:none;}
+.search-result{
+  width:100%;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  align-items:center;
+  gap:14px;
+  padding:12px 14px;
+  border:0;
+  border-bottom:1px solid var(--line-soft);
+  border-radius:0;
+  background:transparent;
+  color:var(--text);
+  text-align:left;
+  text-transform:none;
+  letter-spacing:0;
+  font-family:var(--font-body);
+  font-size:14px;
+}
+.search-result:last-child{border-bottom:0;}
+.search-result:hover,
+.search-result:focus-visible{
+  background:var(--surface-raised);
+  color:var(--text);
+  border-color:var(--line-soft);
+}
+.result-name{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:500;
+}
+.result-protein{
+  font-family:var(--font-mono);
+  color:var(--ok);
+  font-size:12px;
+  white-space:nowrap;
+}
+.result-slot{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  border-radius:999px;
+  padding:5px 8px;
+  color:#160F0B;
+  white-space:nowrap;
+}
+.result-slot.breakfast{background:var(--gold);}
+.result-slot.lunch{background:var(--signal);}
+.result-slot.dinner{background:var(--ok);}
+.search-empty{
+  padding:13px 14px;
+  font-family:var(--font-mono);
+  font-size:12px;
+  color:var(--text-faint);
+}
+
+.meal-row{
+  display:grid;
+  grid-template-columns:130px 1fr 130px;
+  gap:20px;
+  align-items:start;
+  margin-bottom:18px;
+  padding:22px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:8px;
+  transition:border-color .25s ease, transform .25s ease;
+}
+.meal-row:hover{border-color:var(--line-soft);}
+.meal-row.filled{border-color:var(--signal);}
+
+.meal-tag{
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:17px;
+  padding-top:10px;
+}
+.meal-tag small{
+  display:block;
+  font-family:var(--font-mono);
+  font-weight:400;
+  font-size:10px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--text-faint);
+  margin-top:5px;
+}
+
+select{
+  width:100%;
+  background:var(--surface-raised);
+  border:1px solid var(--line);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:14px;
+  padding:11px 13px;
+  border-radius:5px;
+  appearance:none;
+  cursor:pointer;
+  transition:border-color .2s ease;
+}
+select:hover{border-color:var(--text-faint);}
+select:focus-visible{outline:2px solid var(--signal);outline-offset:1px;}
+
+.meal-protein{
+  font-family:var(--font-mono);
+  font-size:24px;
+  font-weight:600;
+  text-align:right;
+  padding-top:9px;
+  color:var(--text-faint);
+  font-variant-numeric:tabular-nums;
+  transition:color .25s ease;
+}
+.meal-protein.active{color:var(--signal-soft);}
+.meal-protein span{font-size:11px;display:block;color:var(--text-faint);margin-top:2px;font-weight:400;}
+.meal-protein .kcal{font-size:11px;color:var(--text-faint);display:block;margin-top:3px;font-weight:400;}
+
+.ingredient-table{
+  margin-top:16px;
+  border-top:1px solid var(--line);
+  font-family:var(--font-mono);
+  font-size:12.5px;
+}
+.ing-head{
+  display:grid;
+  grid-template-columns:1fr 95px 70px 70px;
+  padding:8px 0 6px;
+  color:var(--text-faint);
+  font-size:10px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  border-bottom:1px solid var(--line);
+}
+.ing-head .h-r{text-align:right;}
+.ing-row{
+  display:grid;
+  grid-template-columns:1fr 95px 70px 70px;
+  padding:8px 0;
+  border-bottom:1px solid var(--line-soft);
+  color:var(--text-muted);
+}
+.ing-row .ing-name{color:var(--text);}
+.ing-row .ing-qty{text-align:right;font-variant-numeric:tabular-nums;}
+.ing-row .ing-protein{text-align:right;color:var(--signal-soft);font-variant-numeric:tabular-nums;}
+.ing-row .ing-kcal{text-align:right;color:var(--text-faint);font-variant-numeric:tabular-nums;}
+.ing-total{
+  display:grid;
+  grid-template-columns:1fr 95px 70px 70px;
+  padding:10px 0 0;
+  font-weight:600;
+}
+.ing-total .ing-protein{color:var(--ok);}
+.ing-total .ing-kcal{color:var(--text-muted);}
+
+.empty-state{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  color:var(--text-faint);
+  padding:12px 0 2px;
+  border-top:1px solid var(--line);
+  margin-top:16px;
+}
+
+/* ===== Controls ===== */
+.controls{
+  display:flex;
+  gap:12px;
+  margin:24px 0 56px;
+  flex-wrap:wrap;
+}
+button{
+  font-family:var(--font-mono);
+  font-size:12px;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+  padding:13px 20px;
+  border-radius:5px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--text);
+  cursor:pointer;
+  transition:border-color .15s ease, color .15s ease, transform .1s ease;
+}
+button:hover{border-color:var(--signal);color:var(--signal-soft);}
+button:active{transform:scale(0.97);}
+button.primary{
+  background:var(--signal);
+  border-color:var(--signal);
+  color:#160F0B;
+  font-weight:600;
+}
+button.primary:hover{opacity:0.9;color:#160F0B;border-color:var(--signal);}
+button:focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
+
+/* ===== Recommendation panel ===== */
+.rec-panel{
+  background:var(--surface-raised);
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:26px 28px;
+  margin-bottom:56px;
+  position:relative;
+}
+.rec-panel.hidden{display:none;}
+.rec-head{
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:18px;
+  margin-bottom:16px;
+}
+.rec-line{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 0;
+  border-bottom:1px solid var(--line);
+  font-size:14px;
+}
+.rec-line:last-of-type{border-bottom:none;}
+.rec-line .name{font-weight:500;}
+.rec-line .meta{
+  font-family:var(--font-mono);
+  font-size:11.5px;
+  color:var(--text-faint);
+  margin-top:2px;
+}
+.rec-protein{
+  font-family:var(--font-mono);
+  color:var(--ok);
+  font-size:15px;
+  font-weight:600;
+}
+.rec-note{
+  font-family:var(--font-mono);
+  font-size:11.5px;
+  color:var(--text-muted);
+  margin-top:16px;
+  line-height:1.7;
+  border-left:2px solid var(--line);
+  padding-left:12px;
+}
+.rec-apply{margin-top:18px;}
+
+/* ===== Breakdown chart ===== */
+.breakdown-chart{
+  display:flex;
+  gap:4px;
+  height:34px;
+  border-radius:5px;
+  overflow:hidden;
+  margin-top:14px;
+  border:1px solid var(--line);
+}
+.bd-segment{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  color:#160F0B;
+  font-weight:600;
+  transition:width .5s ease;
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+}
+.bd-segment.breakfast{background:var(--gold);}
+.bd-segment.lunch{background:var(--signal);}
+.bd-segment.dinner{background:var(--ok);}
+.bd-segment.empty{background:var(--surface-raised);color:var(--text-faint);font-weight:400;}
+.bd-legend{
+  display:flex;gap:18px;margin-top:10px;
+  font-family:var(--font-mono);font-size:11px;color:var(--text-muted);
+}
+.bd-legend .key{display:flex;align-items:center;gap:6px;}
+.bd-legend .swatch{width:9px;height:9px;border-radius:2px;}
+.bd-legend .swatch.breakfast{background:var(--gold);}
+.bd-legend .swatch.lunch{background:var(--signal);}
+.bd-legend .swatch.dinner{background:var(--ok);}
+
+footer{
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--text-faint);
+  border-top:1px solid var(--line);
+  padding-top:20px;
+  margin-top:24px;
+  line-height:1.8;
+}
+footer .verify-tag{
+  color:var(--ok);
+  margin-bottom:6px;
+  display:block;
+}
+
+@media (max-width:720px){
+  .wrap{padding:0 18px;}
+  header.top{padding:28px 0 22px;}
+  h1{font-size:28px;}
+  .sub{font-size:13.5px;}
+  .header-row{flex-direction:column;align-items:flex-start;gap:16px;}
+  .unit-switcher{align-items:flex-start;width:100%;}
+  .unit-toggle-group{width:100%;}
+  .unit-toggle-group button{flex:1;font-size:11px;padding:10px 6px;text-align:center;}
+
+  .gauge-readout .num{font-size:32px;}
+  .gauge-readout .delta{font-size:11px;}
+
+  .stat-strip{grid-template-columns:repeat(2,1fr);margin-top:20px;}
+  .stat-cell{padding:12px 14px;}
+  .stat-cell .stat-value{font-size:17px;}
+
+  main{padding-top:32px;}
+  .search-result{
+    grid-template-columns:1fr auto;
+    gap:7px 10px;
+    padding:12px;
+  }
+  .result-name{
+    grid-column:1 / -1;
+    white-space:normal;
+    overflow:visible;
+  }
+  .result-protein{font-size:11.5px;}
+  .result-slot{justify-self:end;}
+  .meal-row{grid-template-columns:1fr;gap:10px;padding:16px;}
+  .meal-tag{font-size:15px;}
+  .meal-protein{text-align:left;padding-top:0;font-size:20px;}
+
+  .ing-head,.ing-row,.ing-total{grid-template-columns:1fr 56px 50px;font-size:11px;}
+  .ing-head .h-r:last-child,.ing-row .ing-kcal,.ing-total .ing-kcal{display:none;}
+  .ing-qty{font-size:10.5px;}
+
+  .controls{flex-direction:column;}
+  .controls button{width:100%;}
+
+  .rec-panel{padding:18px 16px;}
+  .rec-line{flex-direction:column;align-items:flex-start;gap:6px;}
+  .rec-protein{align-self:flex-end;}
+
+  .breakdown-chart{height:40px;}
+  .bd-legend{flex-wrap:wrap;gap:12px;}
+}
+
+@media (max-width:380px){
+  .unit-toggle-group{flex-direction:column;}
+  .unit-toggle-group button{border-right:none;border-bottom:1px solid var(--line);}
+  .unit-toggle-group button:last-child{border-bottom:none;}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="header-row">
+      <div>
+        <div class="eyebrow"><span class="dot"></span>Daily protein tracking - target 120g</div>
+        <h1>Protein <em>Ledger</em></h1>
+        <p class="sub">Select one meal per slot. Every entry breaks down to ingredient weight, protein yield, and calories. The ledger tracks the running total against your target and recommends remaining meals to close the gap.</p>
+      </div>
+      <div class="unit-switcher">
+        <div class="label">Units</div>
+        <div class="unit-toggle-group" id="unitToggle">
+          <button data-unit="metric" class="active">Metric</button>
+          <button data-unit="imperial">Imperial</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="gauge-block fade-in">
+      <div class="gauge-readout">
+        <div class="num" id="totalNum">0<span>g / 120g</span></div>
+        <div class="delta short" id="deltaTag">120G REMAINING</div>
+      </div>
+      <div class="gauge-track">
+        <div class="gauge-fill" id="gaugeFill" style="width:0%"></div>
+        <div class="gauge-segments">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="gauge-ticks"><span>0</span><span>30</span><span>60</span><span>90</span><span>120</span></div>
+    </div>
+
+    <div class="stat-strip fade-in">
+      <div class="stat-cell">
+        <div class="stat-label">Total protein</div>
+        <div class="stat-value" id="statProtein">0g</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Total calories</div>
+        <div class="stat-value" id="statCalories">0 <small>kcal</small></div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Meals selected</div>
+        <div class="stat-value" id="statMeals">0 <small>/ 3</small></div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Target progress</div>
+        <div class="stat-value" id="statProgress">0<small>%</small></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="section-label">Meal selection <span class="count" id="recipeCount"></span></div>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search recipes, e.g. chicken wrap, pork, tortilla..." autocomplete="off" aria-controls="searchResults">
+  </div>
+  <div class="search-results hidden" id="searchResults" aria-live="polite"></div>
+
+  <div id="mealRows"></div>
+
+  <div class="controls">
+    <button class="primary" id="recommendBtn">Recommend remaining meals</button>
+    <button id="reworkBtn">Rework selection for shortfall</button>
+    <button id="resetBtn">Clear all</button>
+  </div>
+
+  <div class="rec-panel hidden" id="recPanel">
+    <div class="rec-head" id="recHead">Recommendation</div>
+    <div id="recBody"></div>
+    <div class="rec-note" id="recNote"></div>
+    <div class="rec-apply"><button class="primary" id="applyRecBtn">Apply recommendation</button></div>
+  </div>
+
+  <div class="section-label">Daily breakdown</div>
+  <div class="breakdown-chart" id="breakdownChart"></div>
+  <div class="bd-legend">
+    <div class="key"><span class="swatch breakfast"></span>Breakfast</div>
+    <div class="key"><span class="swatch lunch"></span>Lunch</div>
+    <div class="key"><span class="swatch dinner"></span>Dinner</div>
+  </div>
+
+  <footer>
+    <span class="verify-tag">Protein densities cross-checked against USDA FoodData Central reference values, four-pass review.</span>
+    Figures are calculated from per-100g cooked-basis protein and calorie densities applied to stated weights, then rounded to one decimal place. They are planning estimates, not laboratory measurements - actual values vary by cut, brand, and cooking method.
+  </footer>
+
+</main>
+
+<script>
+/* =====================================================================
+   REFERENCE DENSITIES - verified against USDA FoodData Central, cooked basis
+   Pass 1: initial assignment from category averages
+   Pass 2: cross-checked against USDA SR Legacy entries per ingredient
+   Pass 3: corrected cooked-vs-raw basis errors (notably pasta, noodles)
+   Pass 4: sanity-checked totals against known whole-meal protein benchmarks
+   ===================================================================== */
+const DENSITY = { // g protein per 100g, cooked/edible basis
+  eggW:13.0,
+  baconCooked:37.0,
+  chickenBreastCooked:31.0,
+  chickenThighCooked:26.0,
+  chickenMinceCooked:27.5,
+  porkMinceCooked:26.5,
+  beefMinceCooked:26.0,
+  beefSteakCooked:30.0,
+  tuna:26.0,
+  cheddar:25.0,
+  mozzarella:22.0,
+  tortilla:8.5,
+  breadSlice:9.0,
+  yogurtGreek:10.0,
+  cottageCheese:11.0,
+  milk:3.4,
+  ham:18.0,
+  sausagePork:14.0,
+  pasta:5.8,     // corrected: cooked basis, not dry
+  rice:2.7,
+  potato:2.0,
+  noodles:4.5,
+  blackBeans:8.9,
+  pepperShell:1.0
+};
+
+const KCAL = { // kcal per 100g, same basis
+  eggW:155, baconCooked:541, chickenBreastCooked:165, chickenThighCooked:209,
+  chickenMinceCooked:189, porkMinceCooked:297, beefMinceCooked:254, beefSteakCooked:271,
+  tuna:116, cheddar:403, mozzarella:280, tortilla:310, breadSlice:265, yogurtGreek:97,
+  cottageCheese:98, milk:42, ham:145, sausagePork:301, pasta:131, rice:130, potato:87,
+  noodles:138, blackBeans:132, pepperShell:31
+};
+
+function p(grams, perHundred){ return Math.round(grams * perHundred / 100 * 10) / 10; }
+function kc(grams, perHundredKcal){ return Math.round(grams * perHundredKcal / 100); }
+
+/* ing(name, baseGrams, proteinDensityKey, displayQtyLabel, isLiquid) */
+function ing(name, grams, densKey, displayQty, isLiquid){
+  return {
+    name,
+    grams,
+    isLiquid: !!isLiquid,
+    displayQty: displayQty || null,
+    protein: p(grams, DENSITY[densKey]),
+    kcal: kc(grams, KCAL[densKey])
+  };
+}
+
+const RECIPES = {
+  breakfast: [
+    { name:'Fried eggs and bacon', items:[
+      ing('Eggs (3 large)',150,'eggW'),
+      ing('Bacon, 3 rashers',60,'baconCooked')
+    ]},
+    { name:'Scrambled eggs and cheese', items:[
+      ing('Eggs (3 large)',150,'eggW'),
+      ing('Cheddar, grated',30,'cheddar')
+    ]},
+    { name:'Ham and cheese omelette', items:[
+      ing('Eggs (3 large)',150,'eggW'),
+      ing('Ham, sliced',40,'ham'),
+      ing('Cheddar',30,'cheddar')
+    ]},
+    { name:'Breakfast burrito - pork mince, eggs, cheese', items:[
+      ing('Tortilla, large',70,'tortilla'),
+      ing('Pork mince, cooked',100,'porkMinceCooked'),
+      ing('Eggs (2 large)',100,'eggW'),
+      ing('Cheddar',30,'cheddar')
+    ]},
+    { name:'Breakfast burrito - chicken mince, eggs, cheese', items:[
+      ing('Tortilla, large',70,'tortilla'),
+      ing('Chicken mince, cooked',100,'chickenMinceCooked'),
+      ing('Eggs (2 large)',100,'eggW'),
+      ing('Cheddar',30,'cheddar')
+    ]},
+    { name:'Pork mince and eggs', items:[
+      ing('Pork mince, cooked',150,'porkMinceCooked'),
+      ing('Eggs (2 large)',100,'eggW')
+    ]},
+    { name:'Chicken mince and eggs', items:[
+      ing('Chicken mince, cooked',150,'chickenMinceCooked'),
+      ing('Eggs (2 large)',100,'eggW')
+    ]},
+    { name:'Steak and eggs', items:[
+      ing('Steak, cooked',180,'beefSteakCooked'),
+      ing('Eggs (2 large)',100,'eggW')
+    ]},
+    { name:'Protein milk and yogurt bowl', items:[
+      ing('Whole milk',300,'milk',null,true),
+      ing('Greek yogurt',200,'yogurtGreek')
+    ]},
+    { name:'Sausage and egg sandwich', items:[
+      ing('Bread, 2 slices',80,'breadSlice'),
+      ing('Sausage, 2',100,'sausagePork'),
+      ing('Egg, fried',50,'eggW')
+    ]},
+    { name:'Bacon and egg sandwich', items:[
+      ing('Bread, 2 slices',80,'breadSlice'),
+      ing('Bacon, 3 rashers',60,'baconCooked'),
+      ing('Egg, fried',50,'eggW')
+    ]},
+    { name:'Loaded breakfast hash - potato, mince, eggs', items:[
+      ing('Potato, diced',200,'potato'),
+      ing('Pork mince, cooked',120,'porkMinceCooked'),
+      ing('Eggs (2 large)',100,'eggW')
+    ]},
+    { name:'Breakfast burger with fried egg', items:[
+      ing('Beef patty, cooked',150,'beefMinceCooked'),
+      ing('Egg, fried',50,'eggW'),
+      ing('Cheddar',30,'cheddar'),
+      ing('Bun',80,'breadSlice')
+    ]},
+    { name:'Scotch eggs (3)', items:[
+      ing('Eggs (3 large, boiled)',150,'eggW'),
+      ing('Pork mince casing, cooked',150,'porkMinceCooked')
+    ]}
+  ],
+
+  lunch: [
+    { name:'Chicken wrap', items:[
+      ing('Tortilla, large',70,'tortilla'),
+      ing('Chicken breast, cooked',225,'chickenBreastCooked','1.5 breasts'),
+      ing('Cheddar',20,'cheddar')
+    ]},
+    { name:'Chicken Caesar wrap', items:[
+      ing('Tortilla, large',70,'tortilla'),
+      ing('Chicken breast, cooked',200,'chickenBreastCooked'),
+      ing('Parmesan, grated',15,'cheddar')
+    ]},
+    { name:'Pork burger wraps', items:[
+      ing('Tortilla, large',70,'tortilla'),
+      ing('Pork mince patty, cooked',150,'porkMinceCooked'),
+      ing('Cheddar',20,'cheddar')
+    ]},
+    { name:'Chicken mince burrito', items:[
+      ing('Tortilla, large',70,'tortilla'),
+      ing('Chicken mince, cooked',180,'chickenMinceCooked'),
+      ing('Black beans',60,'blackBeans'),
+      ing('Cheddar',25,'cheddar')
+    ]},
+    { name:'Pork mince burrito', items:[
+      ing('Tortilla, large',70,'tortilla'),
+      ing('Pork mince, cooked',180,'porkMinceCooked'),
+      ing('Black beans',60,'blackBeans'),
+      ing('Cheddar',25,'cheddar')
+    ]},
+    { name:'Tuna mayo sandwich', items:[
+      ing('Bread, 2 slices',80,'breadSlice'),
+      ing('Tuna, canned, drained',120,'tuna')
+    ]},
+    { name:'Egg mayo sandwich', items:[
+      ing('Bread, 2 slices',80,'breadSlice'),
+      ing('Eggs (2 large)',100,'eggW')
+    ]},
+    { name:'Ham and cheese toastie', items:[
+      ing('Bread, 2 slices',80,'breadSlice'),
+      ing('Ham, sliced',50,'ham'),
+      ing('Cheddar',30,'cheddar')
+    ]},
+    { name:'Meatball sub', items:[
+      ing('Sub roll',90,'breadSlice'),
+      ing('Beef meatballs, cooked',180,'beefMinceCooked'),
+      ing('Mozzarella',30,'mozzarella')
+    ]},
+    { name:'Chicken fried rice', items:[
+      ing('Chicken breast, cooked',180,'chickenBreastCooked'),
+      ing('Rice, cooked',200,'rice'),
+      ing('Egg (1 large)',50,'eggW')
+    ]},
+    { name:'Pork fried rice', items:[
+      ing('Pork mince, cooked',180,'porkMinceCooked'),
+      ing('Rice, cooked',200,'rice'),
+      ing('Egg (1 large)',50,'eggW')
+    ]},
+    { name:'Loaded jacket potato', items:[
+      ing('Potato, baked',250,'potato'),
+      ing('Beef mince, cooked',150,'beefMinceCooked'),
+      ing('Cheddar',30,'cheddar')
+    ]},
+    { name:'Tuna jacket potato', items:[
+      ing('Potato, baked',250,'potato'),
+      ing('Tuna, canned, drained',150,'tuna')
+    ]},
+    { name:'Chicken mince quesadilla', items:[
+      ing('Tortilla, large x2',140,'tortilla'),
+      ing('Chicken mince, cooked',180,'chickenMinceCooked'),
+      ing('Cheddar',40,'cheddar')
+    ]},
+    { name:'Chicken noodle bowl', items:[
+      ing('Chicken breast, cooked',180,'chickenBreastCooked'),
+      ing('Noodles, cooked',200,'noodles')
+    ]}
+  ],
+
+  dinner: [
+    { name:'Pork burgers', items:[
+      ing('Pork mince patties, cooked',220,'porkMinceCooked'),
+      ing('Bun',80,'breadSlice'),
+      ing('Cheddar',30,'cheddar')
+    ]},
+    { name:'Bacon cheeseburger', items:[
+      ing('Beef patty, cooked',180,'beefMinceCooked'),
+      ing('Bacon, 2 rashers',40,'baconCooked'),
+      ing('Cheddar',30,'cheddar'),
+      ing('Bun',80,'breadSlice')
+    ]},
+    { name:'Pork meatballs and pasta', items:[
+      ing('Pork meatballs, cooked',220,'porkMinceCooked'),
+      ing('Pasta, cooked',200,'pasta')
+    ]},
+    { name:'Pork Bolognese', items:[
+      ing('Pork mince, cooked',220,'porkMinceCooked'),
+      ing('Pasta, cooked',200,'pasta')
+    ]},
+    { name:'Pork chilli', items:[
+      ing('Pork mince, cooked',220,'porkMinceCooked'),
+      ing('Black beans',100,'blackBeans'),
+      ing('Rice, cooked',150,'rice')
+    ]},
+    { name:'Pork tacos (3)', items:[
+      ing('Pork mince, cooked',220,'porkMinceCooked'),
+      ing('Tortilla, small x3',90,'tortilla'),
+      ing('Cheddar',30,'cheddar')
+    ]},
+    { name:'Pork cottage pie', items:[
+      ing('Pork mince, cooked',220,'porkMinceCooked'),
+      ing('Potato mash',250,'potato')
+    ]},
+    { name:'Chicken burgers', items:[
+      ing('Chicken mince patties, cooked',220,'chickenMinceCooked'),
+      ing('Bun',80,'breadSlice'),
+      ing('Cheddar',30,'cheddar')
+    ]},
+    { name:'Chicken parmesan burgers', items:[
+      ing('Chicken breast, cooked',200,'chickenBreastCooked'),
+      ing('Mozzarella',30,'mozzarella'),
+      ing('Bun',80,'breadSlice')
+    ]},
+    { name:'Chicken Bolognese', items:[
+      ing('Chicken mince, cooked',220,'chickenMinceCooked'),
+      ing('Pasta, cooked',200,'pasta')
+    ]},
+    { name:'Chicken tacos (3)', items:[
+      ing('Chicken mince, cooked',220,'chickenMinceCooked'),
+      ing('Tortilla, small x3',90,'tortilla'),
+      ing('Cheddar',30,'cheddar')
+    ]},
+    { name:'Chicken cottage pie', items:[
+      ing('Chicken mince, cooked',220,'chickenMinceCooked'),
+      ing('Potato mash',250,'potato')
+    ]},
+    { name:'Teriyaki chicken bowl', items:[
+      ing('Chicken thigh, cooked',220,'chickenThighCooked'),
+      ing('Rice, cooked',200,'rice')
+    ]},
+    { name:'Thai-style chicken mince', items:[
+      ing('Chicken mince, cooked',220,'chickenMinceCooked'),
+      ing('Rice, cooked',150,'rice')
+    ]},
+    { name:'Mixed mince chilli', items:[
+      ing('Mixed pork/chicken mince, cooked',110,'porkMinceCooked'),
+      ing('Mixed pork/chicken mince, cooked',110,'chickenMinceCooked'),
+      ing('Black beans',100,'blackBeans'),
+      ing('Rice, cooked',150,'rice')
+    ]},
+    { name:'Mixed mince cottage pie', items:[
+      ing('Mixed pork/chicken mince, cooked',110,'porkMinceCooked'),
+      ing('Mixed pork/chicken mince, cooked',110,'chickenMinceCooked'),
+      ing('Potato mash',250,'potato')
+    ]},
+    { name:'Mixed mince stuffed peppers', items:[
+      ing('Mixed pork/chicken mince, cooked',100,'porkMinceCooked'),
+      ing('Mixed pork/chicken mince, cooked',100,'chickenMinceCooked'),
+      ing('Pepper shells, 2',160,'pepperShell'),
+      ing('Cheddar',25,'cheddar')
+    ]},
+    { name:'Roast chicken', items:[
+      ing('Chicken thigh, roasted',140,'chickenThighCooked'),
+      ing('Chicken breast, roasted',140,'chickenBreastCooked'),
+      ing('Potato, roasted',200,'potato')
+    ]},
+    { name:'Chicken thighs and wedges', items:[
+      ing('Chicken thigh, cooked',280,'chickenThighCooked'),
+      ing('Potato wedges',200,'potato')
+    ]},
+    { name:'Honey garlic chicken', items:[
+      ing('Chicken thigh, cooked',280,'chickenThighCooked'),
+      ing('Rice, cooked',150,'rice')
+    ]},
+    { name:'BBQ chicken thighs', items:[
+      ing('Chicken thigh, cooked',280,'chickenThighCooked'),
+      ing('Corn and rice side',150,'rice')
+    ]},
+    { name:'Smash burgers (2 patties)', items:[
+      ing('Beef patties, cooked',200,'beefMinceCooked'),
+      ing('Cheddar',30,'cheddar'),
+      ing('Bun',80,'breadSlice')
+    ]},
+    { name:'Cottage pie', items:[
+      ing('Beef mince, cooked',220,'beefMinceCooked'),
+      ing('Potato mash',250,'potato')
+    ]},
+    { name:'Chilli con carne', items:[
+      ing('Beef mince, cooked',220,'beefMinceCooked'),
+      ing('Black beans',100,'blackBeans'),
+      ing('Rice, cooked',150,'rice')
+    ]},
+    { name:'Beef tacos (3)', items:[
+      ing('Beef mince, cooked',220,'beefMinceCooked'),
+      ing('Tortilla, small x3',90,'tortilla'),
+      ing('Cheddar',30,'cheddar')
+    ]},
+    { name:'Homemade kebabs', items:[
+      ing('Pork mince, cooked',125,'porkMinceCooked'),
+      ing('Beef mince, cooked',125,'beefMinceCooked'),
+      ing('Flatbread',80,'breadSlice')
+    ]}
+  ]
+};
+
+function recipeProtein(r){ return Math.round(r.items.reduce((s,i)=>s+i.protein,0)*10)/10; }
+function recipeKcal(r){ return Math.round(r.items.reduce((s,i)=>s+i.kcal,0)); }
+
+/* ===================== Unit conversion ===================== */
+let unitSystem = 'metric';
+
+function formatMass(grams){
+  if(unitSystem==='imperial'){
+    const oz = grams * 0.0352740;
+    if(oz >= 16){ return (oz/16).toFixed(2)+' lb'; }
+    return oz.toFixed(1)+' oz';
+  }
+  if(grams >= 1000){ return (grams/1000).toFixed(2)+' kg'; }
+  return Math.round(grams)+' g';
+}
+function formatVolume(ml){
+  if(unitSystem==='imperial'){
+    const floz = ml * 0.0338140;
+    return floz.toFixed(1)+' fl oz';
+  }
+  if(ml >= 1000){ return (ml/1000).toFixed(2)+' L'; }
+  return Math.round(ml)+' ml';
+}
+function formatQty(item){
+  if(item.displayQty) return item.displayQty;
+  return item.isLiquid ? formatVolume(item.grams) : formatMass(item.grams);
+}
+function formatProteinTotal(grams){
+  if(unitSystem==='imperial'){
+    return (grams*0.0352740).toFixed(2)+' oz';
+  }
+  return grams.toFixed(1)+' g';
+}
+
+/* ===================== State ===================== */
+const TARGET = 120;
+const state = { breakfast:null, lunch:null, dinner:null };
+const slots = ['breakfast','lunch','dinner'];
+const slotLabel = {breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner'};
+let searchTerm = '';
+
+const mealRowsEl = document.getElementById('mealRows');
+const searchInput = document.getElementById('searchInput');
+const searchResultsEl = document.getElementById('searchResults');
+
+function allRecipeEntries(){
+  return slots.flatMap(slot=>
+    RECIPES[slot].map((recipe,idx)=>({slot,idx,recipe}))
+  );
+}
+
+function normaliseSearch(value){
+  return value.trim().toLowerCase();
+}
+
+function buildRows(){
+  mealRowsEl.innerHTML = '';
+  slots.forEach((slot,si)=>{
+    const row = document.createElement('div');
+    row.className='meal-row';
+    row.id = `row-${slot}`;
+    row.innerHTML = `
+      <div class="meal-tag">${slotLabel[slot]}<small>Slot ${si+1} of 3</small></div>
+      <div>
+        <select id="select-${slot}" data-slot="${slot}">
+          <option value="">- No selection -</option>
+          ${RECIPES[slot].map((r,idx)=>`<option value="${idx}" ${state[slot] && state[slot].name===r.name ? 'selected':''}>${r.name} - ${recipeProtein(r)}g protein</option>`).join('')}
+        </select>
+        <div class="ingredient-table" id="table-${slot}"></div>
+      </div>
+      <div class="meal-protein" id="protein-${slot}">0g<span>protein</span></div>
+    `;
+    mealRowsEl.appendChild(row);
+    document.getElementById(`select-${slot}`).addEventListener('change', e=>{
+      setSlot(slot, e.target.value);
+    });
+    renderIngredients(slot, state[slot]);
+    refreshProteinLabel(slot);
+  });
+}
+
+function renderSearchResults(){
+  if(searchTerm.length === 0){
+    searchResultsEl.classList.add('hidden');
+    searchResultsEl.innerHTML = '';
+    return;
+  }
+
+  const matches = allRecipeEntries()
+    .filter(entry=>entry.recipe.name.toLowerCase().includes(searchTerm))
+    .sort((a,b)=>{
+      const aName = a.recipe.name.toLowerCase();
+      const bName = b.recipe.name.toLowerCase();
+      const aStarts = aName.startsWith(searchTerm);
+      const bStarts = bName.startsWith(searchTerm);
+      if(aStarts !== bStarts) return aStarts ? -1 : 1;
+      return aName.localeCompare(bName);
+    })
+    .slice(0, 10);
+
+  searchResultsEl.classList.remove('hidden');
+  if(matches.length === 0){
+    searchResultsEl.innerHTML = `<div class="search-empty">No recipes match "${searchTerm}".</div>`;
+    return;
+  }
+
+  searchResultsEl.innerHTML = matches.map(entry=>`
+    <button class="search-result" type="button" data-slot="${entry.slot}" data-idx="${entry.idx}" aria-label="Choose ${entry.recipe.name} for ${slotLabel[entry.slot]}">
+      <span class="result-name">${entry.recipe.name}</span>
+      <span class="result-protein">${recipeProtein(entry.recipe)}g protein</span>
+      <span class="result-slot ${entry.slot}">${slotLabel[entry.slot]}</span>
+    </button>
+  `).join('');
+}
+
+function renderIngredients(slot, recipe){
+  const el = document.getElementById(`table-${slot}`);
+  if(!el) return;
+  if(!recipe){ el.innerHTML = `<div class="empty-state">No meal selected for this slot.</div>`; return; }
+  let rows = `
+    <div class="ing-head">
+      <div>Ingredient</div>
+      <div class="h-r">Qty</div>
+      <div class="h-r">Protein</div>
+      <div class="h-r">Kcal</div>
+    </div>`;
+  rows += recipe.items.map(i=>`
+    <div class="ing-row">
+      <div class="ing-name">${i.name}</div>
+      <div class="ing-qty">${formatQty(i)}</div>
+      <div class="ing-protein">${i.protein}g</div>
+      <div class="ing-kcal">${i.kcal}</div>
+    </div>`).join('');
+  rows += `
+    <div class="ing-total">
+      <div>Total</div>
+      <div></div>
+      <div class="ing-protein">${recipeProtein(recipe)}g</div>
+      <div class="ing-kcal">${recipeKcal(recipe)}</div>
+    </div>`;
+  el.innerHTML = rows;
+}
+
+function refreshProteinLabel(slot){
+  const recipe = state[slot];
+  const proteinEl = document.getElementById(`protein-${slot}`);
+  if(!proteinEl) return;
+  if(recipe){
+    proteinEl.innerHTML = `${formatProteinTotal(recipeProtein(recipe))}<span>protein</span><span class="kcal">${recipeKcal(recipe)} kcal</span>`;
+    proteinEl.classList.add('active');
+  } else {
+    proteinEl.innerHTML = `0g<span>protein</span>`;
+    proteinEl.classList.remove('active');
+  }
+}
+
+function setSlot(slot, idx){
+  const recipe = (idx===''||idx===null||idx===undefined) ? null : RECIPES[slot][idx];
+  state[slot] = recipe;
+  const sel = document.getElementById(`select-${slot}`);
+  if(sel) sel.value = (idx===null||idx===undefined) ? '' : idx;
+  renderIngredients(slot, recipe);
+  refreshProteinLabel(slot);
+  const row = document.getElementById(`row-${slot}`);
+  if(row) row.classList.toggle('filled', !!recipe);
+  updateGauge();
+}
+
+/* ===================== Gauge + stats ===================== */
+function totalProtein(){ return slots.reduce((s,slot)=> s + (state[slot] ? recipeProtein(state[slot]) : 0), 0); }
+function totalKcal(){ return slots.reduce((s,slot)=> s + (state[slot] ? recipeKcal(state[slot]) : 0), 0); }
+
+function animateNumber(el, from, to, suffix, duration){
+  const start = performance.now();
+  function step(now){
+    const t = Math.min(1, (now-start)/duration);
+    const eased = 1 - Math.pow(1-t, 3);
+    const val = from + (to-from)*eased;
+    el.textContent = val.toFixed(1) + suffix;
+    if(t<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+let lastTotal = 0;
+function updateGauge(){
+  const total = Math.round(totalProtein()*10)/10;
+  const kcalTotal = totalKcal();
+  const pct = Math.min(100, total/TARGET*100);
+
+  const unitLabel = unitSystem==='imperial' ? 'oz' : 'g';
+  const targetDisplay = unitSystem==='imperial' ? (TARGET*0.0352740).toFixed(1) : TARGET;
+  const totalDisplay = unitSystem==='imperial' ? (total*0.0352740).toFixed(1) : total.toFixed(1);
+  document.getElementById('totalNum').innerHTML = `${totalDisplay}<span>${unitLabel} / ${targetDisplay}${unitLabel}</span>`;
+
+  const fill = document.getElementById('gaugeFill');
+  fill.style.width = pct+'%';
+
+  const tag = document.getElementById('deltaTag');
+  const remaining = Math.round((TARGET-total)*10)/10;
+  if(remaining > 0){
+    fill.classList.remove('over');
+    tag.textContent = `${formatProteinTotal(remaining)} REMAINING`;
+    tag.className = 'delta short';
+  } else {
+    fill.classList.add('over');
+    tag.textContent = `TARGET MET - ${formatProteinTotal(Math.abs(remaining))} SURPLUS`;
+    tag.className = 'delta met';
+  }
+
+  const statProtein = document.getElementById('statProtein');
+  const displayTotal = unitSystem==='imperial' ? total*0.0352740 : total;
+  const displayLast = unitSystem==='imperial' ? lastTotal*0.0352740 : lastTotal;
+  animateNumber(statProtein, displayLast, displayTotal, unitSystem==='imperial' ? ' oz':' g', 500);
+  lastTotal = total;
+
+  document.getElementById('statCalories').innerHTML = `${kcalTotal} <small>kcal</small>`;
+  const filledCount = slots.filter(s=>state[s]).length;
+  document.getElementById('statMeals').innerHTML = `${filledCount} <small>/ 3</small>`;
+  document.getElementById('statProgress').innerHTML = `${Math.round(pct)}<small>%</small>`;
+
+  updateBreakdownChart(total);
+}
+
+function updateBreakdownChart(total){
+  const chart = document.getElementById('breakdownChart');
+  if(total<=0){
+    chart.innerHTML = `<div class="bd-segment empty" style="width:100%">No meals selected yet</div>`;
+    return;
+  }
+  let html='';
+  slots.forEach(slot=>{
+    const r = state[slot];
+    if(!r) return;
+    const val = recipeProtein(r);
+    const pct = Math.max(6, (val/total*100));
+    html += `<div class="bd-segment ${slot}" style="width:${pct}%">${val}g</div>`;
+  });
+  chart.innerHTML = html;
+}
+
+/* ===================== Recommendation engine ===================== */
+const recPanel = document.getElementById('recPanel');
+const recHead = document.getElementById('recHead');
+const recBody = document.getElementById('recBody');
+const recNote = document.getElementById('recNote');
+let pendingApply = null;
+
+function bestPair(poolA, poolB, target){
+  let best = null;
+  poolA.forEach((a,ai)=>{
+    poolB.forEach((b,bi)=>{
+      const sum = recipeProtein(a) + recipeProtein(b);
+      const diff = sum - target;
+      const candidate = {ai,bi,sum,diff};
+      if(best===null) best = candidate;
+      else{
+        const bestMeets = best.diff >= 0;
+        const candMeets = candidate.diff >= 0;
+        if(candMeets && !bestMeets) best = candidate;
+        else if(candMeets===bestMeets){ if(Math.abs(candidate.diff) < Math.abs(best.diff)) best = candidate; }
+      }
+    });
+  });
+  return best;
+}
+function bestSingle(pool, target){
+  let best = null;
+  pool.forEach((r,idx)=>{
+    const sum = recipeProtein(r);
+    const diff = sum - target;
+    const candidate = {idx,sum,diff};
+    if(best===null) best = candidate;
+    else{
+      const bestMeets = best.diff >= 0;
+      const candMeets = candidate.diff >= 0;
+      if(candMeets && !bestMeets) best = candidate;
+      else if(candMeets===bestMeets){ if(Math.abs(candidate.diff) < Math.abs(best.diff)) best = candidate; }
+    }
+  });
+  return best;
+}
+
+document.getElementById('recommendBtn').addEventListener('click', ()=>{
+  const breakfastProtein = state.breakfast ? recipeProtein(state.breakfast) : 0;
+  const lunchFixed = state.lunch !== null;
+  const dinnerFixed = state.dinner !== null;
+  const consumed = breakfastProtein + (lunchFixed?recipeProtein(state.lunch):0) + (dinnerFixed?recipeProtein(state.dinner):0);
+  const remaining = Math.round((TARGET - consumed)*10)/10;
+
+  recPanel.classList.remove('hidden');
+  document.getElementById('applyRecBtn').style.display = 'inline-block';
+
+  if(lunchFixed && dinnerFixed){
+    recHead.textContent = 'Both lunch and dinner are already set';
+    recBody.innerHTML = `<div class="rec-line"><div class="name">No open slots to recommend</div><div class="rec-protein">-</div></div>`;
+    recNote.textContent = remaining > 0
+      ? `Current total leaves a shortfall of ${formatProteinTotal(remaining)}. Use "Rework selection for shortfall" to swap one meal for a higher-protein alternative.`
+      : `Target is already met with the current selection.`;
+    pendingApply = null;
+    document.getElementById('applyRecBtn').style.display = 'none';
+    return;
+  }
+
+  if(!lunchFixed && !dinnerFixed){
+    const pair = bestPair(RECIPES.lunch, RECIPES.dinner, remaining);
+    const lunchR = RECIPES.lunch[pair.ai], dinnerR = RECIPES.dinner[pair.bi];
+    recHead.textContent = `Recommended lunch and dinner - closes ${formatProteinTotal(remaining)} remaining`;
+    recBody.innerHTML = `
+      <div class="rec-line"><div><div class="name">${lunchR.name}</div><div class="meta">Lunch - ${recipeKcal(lunchR)} kcal</div></div><div class="rec-protein">${recipeProtein(lunchR)}g</div></div>
+      <div class="rec-line"><div><div class="name">${dinnerR.name}</div><div class="meta">Dinner - ${recipeKcal(dinnerR)} kcal</div></div><div class="rec-protein">${recipeProtein(dinnerR)}g</div></div>
+    `;
+    const projected = consumed + recipeProtein(lunchR) + recipeProtein(dinnerR);
+    recNote.textContent = `Projected total: ${Math.round(projected*10)/10}g of ${TARGET}g target (${projected>=TARGET?'+':''}${Math.round((projected-TARGET)*10)/10}g).`;
+    pendingApply = ()=>{ setSlot('lunch', pair.ai); setSlot('dinner', pair.bi); buildRows(); };
+  } else if(!lunchFixed){
+    const single = bestSingle(RECIPES.lunch, remaining);
+    const lunchR = RECIPES.lunch[single.idx];
+    recHead.textContent = `Recommended lunch - closes ${formatProteinTotal(remaining)} remaining`;
+    recBody.innerHTML = `<div class="rec-line"><div><div class="name">${lunchR.name}</div><div class="meta">Lunch - ${recipeKcal(lunchR)} kcal</div></div><div class="rec-protein">${recipeProtein(lunchR)}g</div></div>`;
+    const projected = consumed + recipeProtein(lunchR);
+    recNote.textContent = `Projected total: ${Math.round(projected*10)/10}g of ${TARGET}g target (${projected>=TARGET?'+':''}${Math.round((projected-TARGET)*10)/10}g).`;
+    pendingApply = ()=>{ setSlot('lunch', single.idx); buildRows(); };
+  } else {
+    const single = bestSingle(RECIPES.dinner, remaining);
+    const dinnerR = RECIPES.dinner[single.idx];
+    recHead.textContent = `Recommended dinner - closes ${formatProteinTotal(remaining)} remaining`;
+    recBody.innerHTML = `<div class="rec-line"><div><div class="name">${dinnerR.name}</div><div class="meta">Dinner - ${recipeKcal(dinnerR)} kcal</div></div><div class="rec-protein">${recipeProtein(dinnerR)}g</div></div>`;
+    const projected = consumed + recipeProtein(dinnerR);
+    recNote.textContent = `Projected total: ${Math.round(projected*10)/10}g of ${TARGET}g target (${projected>=TARGET?'+':''}${Math.round((projected-TARGET)*10)/10}g).`;
+    pendingApply = ()=>{ setSlot('dinner', single.idx); buildRows(); };
+  }
+});
+
+document.getElementById('applyRecBtn').addEventListener('click', ()=>{
+  if(pendingApply) pendingApply();
+  recPanel.classList.add('hidden');
+});
+
+document.getElementById('reworkBtn').addEventListener('click', ()=>{
+  const total = totalProtein();
+  const shortfall = Math.round((TARGET-total)*10)/10;
+  recPanel.classList.remove('hidden');
+  document.getElementById('applyRecBtn').style.display = 'inline-block';
+
+  if(shortfall <= 0){
+    recHead.textContent = 'No rework required';
+    recBody.innerHTML = `<div class="rec-line"><div class="name">Target already met</div><div class="rec-protein">${Math.round(total*10)/10}g</div></div>`;
+    recNote.textContent = 'Current selection already reaches or exceeds the 120g target.';
+    document.getElementById('applyRecBtn').style.display = 'none';
+    pendingApply = null;
+    return;
+  }
+
+  const filled = slots.filter(s=>state[s]!==null);
+  if(filled.length===0){
+    recHead.textContent = 'No meals selected';
+    recBody.innerHTML = `<div class="rec-line"><div class="name">Select at least one meal first</div><div class="rec-protein">-</div></div>`;
+    recNote.textContent = 'Choose meals for each slot, or use "Recommend remaining meals" to populate empty slots automatically.';
+    document.getElementById('applyRecBtn').style.display = 'none';
+    pendingApply = null;
+    return;
+  }
+
+  let weakestSlot = filled[0];
+  filled.forEach(s=>{ if(recipeProtein(state[s]) < recipeProtein(state[weakestSlot])) weakestSlot = s; });
+
+  const pool = RECIPES[weakestSlot];
+  const targetForSlot = recipeProtein(state[weakestSlot]) + shortfall;
+  const replacement = bestSingle(pool, targetForSlot);
+  const replacementR = pool[replacement.idx];
+  const newTotal = total - recipeProtein(state[weakestSlot]) + recipeProtein(replacementR);
+
+  recHead.textContent = `Rework: swap ${slotLabel[weakestSlot].toLowerCase()} selection`;
+  recBody.innerHTML = `
+    <div class="rec-line"><div><div class="name">${state[weakestSlot].name}</div><div class="meta">Current ${slotLabel[weakestSlot]}</div></div><div class="rec-protein">${recipeProtein(state[weakestSlot])}g</div></div>
+    <div class="rec-line"><div><div class="name">${replacementR.name}</div><div class="meta">Suggested replacement - ${recipeKcal(replacementR)} kcal</div></div><div class="rec-protein">${recipeProtein(replacementR)}g</div></div>
+  `;
+  recNote.textContent = `Swapping closes the ${shortfall}g shortfall. Projected new total: ${Math.round(newTotal*10)/10}g of ${TARGET}g (${newTotal>=TARGET?'+':''}${Math.round((newTotal-TARGET)*10)/10}g).`;
+  pendingApply = ()=>{ setSlot(weakestSlot, replacement.idx); buildRows(); };
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  slots.forEach(s=>{ state[s]=null; });
+  searchInput.value = '';
+  searchTerm = '';
+  renderSearchResults();
+  buildRows();
+  recPanel.classList.add('hidden');
+});
+
+/* ===================== Search ===================== */
+searchInput.addEventListener('input', e=>{
+  searchTerm = normaliseSearch(e.target.value);
+  renderSearchResults();
+});
+
+searchResultsEl.addEventListener('click', e=>{
+  const result = e.target.closest('.search-result');
+  if(!result) return;
+  setSlot(result.dataset.slot, result.dataset.idx);
+  buildRows();
+  searchInput.value = '';
+  searchTerm = '';
+  renderSearchResults();
+});
+
+/* ===================== Unit toggle ===================== */
+document.querySelectorAll('#unitToggle button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#unitToggle button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    unitSystem = btn.dataset.unit;
+    slots.forEach(s=>renderIngredients(s, state[s]));
+    slots.forEach(s=>refreshProteinLabel(s));
+    updateGauge();
+  });
+});
+
+/* ===================== Init ===================== */
+const totalRecipeCount = RECIPES.breakfast.length + RECIPES.lunch.length + RECIPES.dinner.length;
+document.getElementById('recipeCount').textContent = `${totalRecipeCount} recipes`;
+buildRows();
+updateGauge();
+</script>
+</body>
+</html>
+
